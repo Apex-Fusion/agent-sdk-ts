@@ -1,0 +1,8 @@
+node_modules/
+dist/
+*.tsbuildinfo
+package-lock.json
+.env
+mnemonic.txt
+keys/
+vector-audit-log.json

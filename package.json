@@ -1,0 +1,62 @@
+{
+  "name": "@apexfusion/agent-sdk",
+  "version": "0.1.0",
+  "description": "TypeScript Agent SDK for Vector blockchain (Apex Fusion L2)",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "postinstall": "ln -sf ../../../libsodium-sumo/dist/modules-sumo-esm/libsodium-sumo.mjs node_modules/libsodium-wrappers-sumo/dist/modules-sumo-esm/libsodium-sumo.mjs 2>/dev/null || true",
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:watch": "vitest",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "vector",
+    "blockchain",
+    "cardano",
+    "apex-fusion",
+    "ai-agent",
+    "utxo",
+    "sdk"
+  ],
+  "author": "Apex Fusion",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Apex-Fusion/vector-agent-sdk-ts.git"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@lucid-evolution/lucid": "^0.4.29",
+    "@noble/hashes": "^1.7.1",
+    "cross-fetch": "^4.0.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.1",
+    "tsup": "^8.5.1",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.0"
+  }
+}
