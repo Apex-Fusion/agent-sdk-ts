@@ -1,6 +1,6 @@
 {
   "name": "@apexfusion/agent-sdk",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "TypeScript Agent SDK for Vector blockchain (Apex Fusion L2)",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -39,7 +39,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Apex-Fusion/vector-agent-sdk-ts.git"
+    "url": "https://github.com/Apex-Fusion/agent-sdk-ts.git"
   },
   "engines": {
     "node": ">=18.0.0"
