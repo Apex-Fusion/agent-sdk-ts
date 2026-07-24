@@ -1,6 +1,8 @@
 # @apexfusion/agent-sdk
 
-TypeScript Agent SDK for the Vector blockchain (Apex Fusion L2). Built on Lucid Evolution + Ogmios.
+TypeScript Agent SDK for **Vector**, the Apex Fusion eUTXO L2. Built on Lucid Evolution + Ogmios.
+
+**Vector mainnet is live.** Full guides: [Vector AI documentation](https://apex-fusion.github.io/vector-ai-documentation/).
 
 ## Quick Start
 
@@ -24,15 +26,28 @@ await agent.close();
 npm install @apexfusion/agent-sdk
 ```
 
+## Networks
+
+Vector runs a public testnet and mainnet. The SDK talks to whichever endpoints you configure:
+
+| Variable | Testnet | Mainnet |
+|---|---|---|
+| `VECTOR_OGMIOS_URL` | `https://ogmios.vector.testnet.apexfusion.org` | `https://ogmios.vector.mainnet.apexfusion.org` |
+| `VECTOR_SUBMIT_URL` | `https://submit.vector.testnet.apexfusion.org/api/submit/tx` | `https://submit.vector.mainnet.apexfusion.org/api/submit/tx` |
+| `VECTOR_KOIOS_URL` | `https://v2.koios.vector.testnet.apexfusion.org/` | `https://v2.koios.vector.mainnet.apexfusion.org/` |
+| `VECTOR_EXPLORER_URL` | `https://vector.testnet.apexscan.org` | `https://vector.apexscan.org/en/` |
+
+Two things to know: Vector's testnet uses the **mainnet network ID**, so all addresses start with `addr1`. And the native coin is **AP3X** (smallest unit DFM, 1 AP3X = 1,000,000 DFM) - code-level names like `ada` and `lovelace` come from the underlying Cardano tooling and denominate AP3X/DFM amounts.
+
 ## Features
 
-- **Wallet management** — HD wallets (BIP39 mnemonic) and cardano-cli signing keys
-- **Balance & UTxO queries** — ADA and native token balances
-- **Transactions** — send ADA, send tokens, multi-output, dry-run
-- **Smart contracts** — deploy and interact with Plutus/Aiken contracts
-- **Agent registry** — on-chain agent registration, discovery, messaging
-- **Safety controls** — per-transaction and daily spend limits, audit logging
-- **Rate limiting** — sliding window rate limiter
+- **Wallet management** - HD wallets (BIP39 mnemonic) and cardano-cli signing keys
+- **Balance & UTxO queries** - AP3X and native token balances
+- **Transactions** - send AP3X, send tokens, multi-output, dry-run
+- **Smart contracts** - deploy and interact with Plutus/Aiken contracts
+- **Agent registry** - on-chain agent registration, discovery, messaging
+- **Safety controls** - per-transaction and daily spend limits, audit logging
+- **Rate limiting** - sliding window rate limiter
 
 ## Configuration
 
@@ -42,12 +57,12 @@ Configuration is resolved from constructor params, then environment variables, t
 const agent = new VectorAgent({
   ogmiosUrl: 'https://ogmios.vector.testnet.apexfusion.org',
   submitUrl: 'https://submit.vector.testnet.apexfusion.org/api/submit/tx',
-  koiosUrl: 'https://koios.vector.testnet.apexfusion.org/',
+  koiosUrl: 'https://v2.koios.vector.testnet.apexfusion.org/',
   explorerUrl: 'https://vector.testnet.apexscan.org',
   mnemonic: process.env.VECTOR_MNEMONIC,
   accountIndex: 0,
-  spendLimitPerTx: 100_000_000,  // 100 ADA
-  spendLimitDaily: 500_000_000,  // 500 ADA
+  spendLimitPerTx: 100_000_000,  // 100 AP3X
+  spendLimitDaily: 500_000_000,  // 500 AP3X
 });
 ```
 
