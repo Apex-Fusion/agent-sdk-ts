@@ -2,6 +2,7 @@
   "name": "@apexfusion/agent-sdk",
   "version": "0.1.1",
   "description": "TypeScript Agent SDK for Vector blockchain (Apex Fusion L2)",
+  "homepage": "https://apex-fusion.github.io/vector-ai-documentation/",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
