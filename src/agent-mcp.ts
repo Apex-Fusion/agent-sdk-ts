@@ -27,9 +27,9 @@ export interface IVectorAgentMCP {
   getSpendLimits(): Promise<SpendStatus>;
 
   // Transactions
-  send(params: { to: string; lovelace?: number; ada?: number; metadata?: Record<number, any> }): Promise<TxResult>;
-  sendTokens(params: { to: string; policyId: string; assetName: string; quantity: number | string; ada?: number }): Promise<TokenTxResult>;
-  dryRun(params: { to: string; lovelace?: number; ada?: number }): Promise<DryRunResult>;
+  send(params: { to: string; lovelace?: number; ada?: number; apex?: number; dfm?: number; metadata?: Record<number, any> }): Promise<TxResult>;
+  sendTokens(params: { to: string; policyId: string; assetName: string; quantity: number | string; ada?: number; apex?: number }): Promise<TokenTxResult>;
+  dryRun(params: { to: string; lovelace?: number; ada?: number; apex?: number; dfm?: number }): Promise<DryRunResult>;
   buildTransaction(params: { outputs: TxOutput[]; metadata?: Record<number, any>; submit?: boolean }): Promise<BuildTxResult>;
   getTransactionHistory(params?: { address?: string; limit?: number; offset?: number }): Promise<TxSummary[]>;
 

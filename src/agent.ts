@@ -151,19 +151,23 @@ export class VectorAgent {
     to: string;
     lovelace?: number;
     ada?: number;
+    apex?: number;
+    dfm?: number;
     metadata?: Record<number, any>;
   }): Promise<TxResult> {
     const lucid = await this.ensureLucid();
     const senderAddress = await lucid.wallet().address();
 
-    // Resolve amount
+    // Resolve amount (apex/dfm preferred; ada/lovelace kept as compatibility aliases)
+    const wholeCoin = params.ada ?? params.apex;
+    const smallestUnit = params.lovelace ?? params.dfm;
     let lovelaceAmount: number;
-    if (params.lovelace) {
-      lovelaceAmount = params.lovelace;
-    } else if (params.ada) {
-      lovelaceAmount = Math.floor(params.ada * 1_000_000);
+    if (smallestUnit) {
+      lovelaceAmount = smallestUnit;
+    } else if (wholeCoin) {
+      lovelaceAmount = Math.floor(wholeCoin * 1_000_000);
     } else {
-      throw new TransactionError('Provide either lovelace or ada amount');
+      throw new TransactionError('Provide an amount: apex (AP3X) or dfm (or ada/lovelace)');
     }
 
     // Validate recipient
@@ -207,6 +211,7 @@ export class VectorAgent {
     assetName: string;
     quantity: number | string;
     ada?: number;
+    apex?: number;
   }): Promise<TokenTxResult> {
     const lucid = await this.ensureLucid();
     const senderAddress = await lucid.wallet().address();
@@ -224,8 +229,9 @@ export class VectorAgent {
     }
 
     const unit = `${params.policyId}${assetNameHex}`;
-    const outputLovelace = params.ada
-      ? BigInt(Math.floor(params.ada * 1_000_000))
+    const companionCoin = params.ada ?? params.apex;
+    const outputLovelace = companionCoin
+      ? BigInt(Math.floor(companionCoin * 1_000_000))
       : BigInt(2_000_000);
 
     this.safety.enforceTransaction(Number(outputLovelace));
@@ -258,16 +264,20 @@ export class VectorAgent {
     to: string;
     lovelace?: number;
     ada?: number;
+    apex?: number;
+    dfm?: number;
   }): Promise<DryRunResult> {
     const lucid = await this.ensureLucid();
 
+    const wholeCoin = params.ada ?? params.apex;
+    const smallestUnit = params.lovelace ?? params.dfm;
     let lovelaceAmount: number;
-    if (params.lovelace) {
-      lovelaceAmount = params.lovelace;
-    } else if (params.ada) {
-      lovelaceAmount = Math.floor(params.ada * 1_000_000);
+    if (smallestUnit) {
+      lovelaceAmount = smallestUnit;
+    } else if (wholeCoin) {
+      lovelaceAmount = Math.floor(wholeCoin * 1_000_000);
     } else {
-      throw new TransactionError('Provide either lovelace or ada amount');
+      throw new TransactionError('Provide an amount: apex (AP3X) or dfm (or ada/lovelace)');
     }
 
     try {
