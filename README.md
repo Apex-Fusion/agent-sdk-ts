@@ -15,7 +15,7 @@ const agent = new VectorAgent({
 
 const address = await agent.getAddress();
 const balance = await agent.getBalance();
-const tx = await agent.send({ to: 'addr1...', ada: 5 });
+const tx = await agent.send({ to: 'addr1...', apex: 5 });
 
 await agent.close();
 ```
@@ -37,7 +37,7 @@ Vector runs a public testnet and mainnet. The SDK talks to whichever endpoints y
 | `VECTOR_KOIOS_URL` | `https://v2.koios.vector.testnet.apexfusion.org/` | `https://v2.koios.vector.mainnet.apexfusion.org/` |
 | `VECTOR_EXPLORER_URL` | `https://vector.testnet.apexscan.org` | `https://vector.apexscan.org/en/` |
 
-Two things to know: Vector's testnet uses the **mainnet network ID**, so all addresses start with `addr1`. And the native coin is **AP3X** (smallest unit DFM, 1 AP3X = 1,000,000 DFM) - code-level names like `ada` and `lovelace` come from the underlying Cardano tooling and denominate AP3X/DFM amounts.
+Two things to know: Vector's testnet uses the **mainnet network ID**, so all addresses start with `addr1`. And the native coin is **AP3X** (smallest unit DFM, 1 AP3X = 1,000,000 DFM). Since 0.1.2 the amount parameters accept `apex` (whole AP3X) and `dfm` (smallest unit) as the preferred names; `ada`/`lovelace` remain as compatibility aliases from the underlying Cardano tooling, and response fields keep their tooling names.
 
 ## Features
 
@@ -83,9 +83,9 @@ await agent.getSpendLimits()
 ### Transactions
 
 ```typescript
-await agent.send({ to, lovelace?, ada?, metadata? })
+await agent.send({ to, apex?, dfm?, ada?, lovelace?, metadata? })
 await agent.sendTokens({ to, policyId, assetName, quantity, ada? })
-await agent.dryRun({ to, lovelace?, ada? })
+await agent.dryRun({ to, apex?, dfm?, ada?, lovelace? })
 await agent.buildTransaction({ outputs, metadata?, submit? })
 await agent.getTransactionHistory({ address?, limit?, offset? })
 ```
