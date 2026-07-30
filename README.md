@@ -84,7 +84,7 @@ await agent.getSpendLimits()
 
 ```typescript
 await agent.send({ to, apex?, dfm?, ada?, lovelace?, metadata? })
-await agent.sendTokens({ to, policyId, assetName, quantity, ada? })
+await agent.sendTokens({ to, policyId, assetName, quantity, apex?, ada? })
 await agent.dryRun({ to, apex?, dfm?, ada?, lovelace? })
 await agent.buildTransaction({ outputs, metadata?, submit? })
 await agent.getTransactionHistory({ address?, limit?, offset? })
