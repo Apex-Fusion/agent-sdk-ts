@@ -7,8 +7,8 @@ against the files in both directions.
 | Field | Value |
 |---|---|
 | Source | https://github.com/Apex-Fusion/agents-marketplace |
-| Commit | `d786fff5589bbef19943a90613531d2eb0111626` |
-| Commit date | 2026-11-02T19:03:39+01:00 |
+| Commit | `67846da8cc50674ae4fa23b88c8e2a1af4903c57` |
+| Commit date | 2026-11-02T19:59:50+01:00 |
 | Local changes in the copied files | none |
 | Command | `node scripts/sync-identity.mjs <agents-marketplace path>` |
 
@@ -17,7 +17,7 @@ Each copy keeps its source path below its vendor root.
 
 | File | Source path | SHA-256 |
 |---|---|---|
-| `src/vendor/agents-marketplace/contracts/identity-marketplace/plutus.json` | `contracts/identity-marketplace/plutus.json` | `0d4e3ec1ba3982c4e4e60c29045cd9a0fd554ec3ee598ca77fbabeb85723f7c3` |
+| `src/vendor/agents-marketplace/contracts/identity-marketplace/plutus.json` | `contracts/identity-marketplace/plutus.json` | `9c8d948a2da12fa519b6f97286cbb8374c002b6bca7e4a3ef1a6d65cca51df3e` |
 | `src/vendor/agents-marketplace/packages/shared/src/cbor/AdvertDatum.ts` | `packages/shared/src/cbor/AdvertDatum.ts` | `0bdbde4a816a62e453b4053e07fec72a480e1af08c58e0de890562c39fa9f134` |
 | `src/vendor/agents-marketplace/packages/shared/src/cbor/Attestation.ts` | `packages/shared/src/cbor/Attestation.ts` | `61834ba3b5710a103d0d50e1a143bae55256399d63551bf50e37cca5543b70fc` |
 | `src/vendor/agents-marketplace/packages/shared/src/cbor/Delegation.ts` | `packages/shared/src/cbor/Delegation.ts` | `41f776d1910a55972fa218208c25abd9873cfb26958074fc824c449a371be86e` |
@@ -43,13 +43,13 @@ Each copy keeps its source path below its vendor root.
 | `src/vendor/agents-marketplace/packages/shared/src/identity/tx/complete.ts` | `packages/shared/src/identity/tx/complete.ts` | `e136607e1ee00ec0bcb1719d2954a4ae33d96179d2b65979918043f36c866ebb` |
 | `src/vendor/agents-marketplace/packages/shared/src/identity/tx/config.ts` | `packages/shared/src/identity/tx/config.ts` | `f14be4012210b2843d34139117ad9abd9909d610a4c40ab7aa89f19521110594` |
 | `src/vendor/agents-marketplace/packages/shared/src/identity/tx/delegation.ts` | `packages/shared/src/identity/tx/delegation.ts` | `3479467174be4f4ea8fe4e459ad4893d4024e7a32074fcf77fa7cce363e8518e` |
-| `src/vendor/agents-marketplace/packages/shared/src/identity/tx/identity.ts` | `packages/shared/src/identity/tx/identity.ts` | `49e97a33fdf53130dcc1b1fb8a6c53890c7e55b4e6a6db59f0dc9bbf3696f43f` |
+| `src/vendor/agents-marketplace/packages/shared/src/identity/tx/identity.ts` | `packages/shared/src/identity/tx/identity.ts` | `3afe46e760324657b6d4c7129b5f8018145ec625096a8672f113065d12ed99cf` |
 | `src/vendor/agents-marketplace/packages/shared/src/identity/tx/index.ts` | `packages/shared/src/identity/tx/index.ts` | `a081fb2759d409b8229588b1dc632abfd3e1d9303c417bada4316982dca04d25` |
 | `src/vendor/agents-marketplace/packages/shared/src/identity/tx/ledger.ts` | `packages/shared/src/identity/tx/ledger.ts` | `c8f12af21380d365ec3fc6ed1ccc9044db96f1f01cc0d7696ab461b0548abb01` |
 | `src/vendor/agents-marketplace/packages/shared/src/identity/tx/pop.ts` | `packages/shared/src/identity/tx/pop.ts` | `1587cda2002e9271bd48f25466645c0740552a5ac554b97af23cbdf059e7d2ed` |
 | `src/vendor/agents-marketplace/packages/shared/src/identity/tx/records.ts` | `packages/shared/src/identity/tx/records.ts` | `328badbeb6230d9101f009646ef94cfdde8ffd94f353fb66ff4a0c2bc12f3215` |
 | `src/vendor/agents-marketplace/packages/shared/src/identity/tx/types.ts` | `packages/shared/src/identity/tx/types.ts` | `205aa69dfda0a88eb6e88d9663a46b28258f7ee015d7258041dd20274337c215` |
-| `src/vendor/agents-marketplace/packages/shared/src/identity/tx/vault.ts` | `packages/shared/src/identity/tx/vault.ts` | `ef87f2ecba4c69063b1f3f45b350a0e36b767b226b2405e00ba3be517897250f` |
+| `src/vendor/agents-marketplace/packages/shared/src/identity/tx/vault.ts` | `packages/shared/src/identity/tx/vault.ts` | `69898e26fc0a617380936784fd5a215ed691be914a486dbc83bd64b465fc4c1d` |
 | `src/vendor/agents-marketplace/packages/shared/src/identity/tx/witness.ts` | `packages/shared/src/identity/tx/witness.ts` | `83992f65311805a906d70ad59e7d76972c65be8c4c7b08add7cbfcbc3e56aad2` |
 | `src/vendor/agents-marketplace/packages/shared/src/network.ts` | `packages/shared/src/network.ts` | `be2e1af7105372c672473ddc4db0fe89a18c7b7a3ade5a6070966d562fa6fe7e` |
 | `src/vendor/agents-marketplace/packages/shared/src/tx/types.ts` | `packages/shared/src/tx/types.ts` | `7dfe647312c71996c01fa0b3f3641f6133d58477aca772cf63f597e50d16db87` |
