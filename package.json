@@ -1,6 +1,6 @@
 {
   "name": "@apexfusion/agent-sdk",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "TypeScript Agent SDK for Vector blockchain (Apex Fusion L2)",
   "homepage": "https://apex-fusion.github.io/vector-ai-documentation/",
   "type": "module",
@@ -25,6 +25,7 @@
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "test:watch": "vitest",
     "clean": "rm -rf dist",
+    "sync:identity": "node scripts/sync-identity.mjs",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
@@ -43,14 +44,19 @@
     "url": "https://github.com/Apex-Fusion/agent-sdk-ts.git"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.0.0"
   },
   "publishConfig": {
     "access": "public"
   },
   "dependencies": {
+    "@harmoniclabs/cbor": "1.6.6",
     "@lucid-evolution/lucid": "^0.4.29",
+    "@lucid-evolution/uplc": "0.2.20",
+    "@noble/ed25519": "2.3.0",
     "@noble/hashes": "^1.7.1",
+    "bech32": "2.0.0",
+    "cbor-x": "1.6.4",
     "cross-fetch": "^4.0.0",
     "zod": "^3.24.1"
   },

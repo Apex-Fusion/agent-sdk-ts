@@ -4,6 +4,8 @@ export interface VectorAgentConfig {
   ogmiosUrl?: string;
   submitUrl?: string;
   koiosUrl?: string;
+  /** A Koios bearer token (or set VECTOR_KOIOS_TOKEN). */
+  koiosToken?: string;
   mnemonic?: string;
   skeyPath?: string;
   skeyCborHex?: string;
@@ -135,6 +137,11 @@ export interface AgentProfile {
   ownerVkeyHash?: string;
 }
 
+/**
+ * @deprecated The result of a new legacy registration (`registerAgent`).
+ * New records belong in the identity registry (`IdentityRegistry.register`,
+ * which returns a `CreatedRecordTx`). Kept until the switch date.
+ */
 export interface AgentRegistrationResult {
   agentId: string;
   nftAssetName: string;

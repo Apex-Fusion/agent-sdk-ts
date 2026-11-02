@@ -2,8 +2,9 @@
 // VectorAgent — main orchestrator class for the Vector Agent SDK.
 // @ts-nocheck needed because Lucid's Data/Constr types and some internal APIs are dynamically typed.
 
-import { Lucid, fromText, Data, applyDoubleCborEncoding, validatorToAddress, validatorToScriptHash, getAddressDetails } from '@lucid-evolution/lucid';
+import { Lucid, fromText, Data, applyDoubleCborEncoding, validatorToAddress, validatorToScriptHash, getAddressDetails, CML } from '@lucid-evolution/lucid';
 import type { LucidEvolution, SpendingValidator } from '@lucid-evolution/lucid';
+import * as ed from '@noble/ed25519';
 import { OgmiosProvider } from './chain/ogmios-provider.js';
 import { SafetyLayer } from './safety/safety-layer.js';
 import { RateLimiter } from './safety/rate-limiter.js';
@@ -19,6 +20,9 @@ import {
   DEFAULT_EXPLORER_URL, DEFAULT_PER_TX_LIMIT, DEFAULT_DAILY_LIMIT,
 } from './constants.js';
 import { lovelaceToAda, explorerTxLink, formatAssetName } from './utils.js';
+import { createIdentityClients, IdentityContext, identityConfig } from './identity/index.js';
+import type { IdentityClients, IdentityConfigInput, UnsignedTx } from './identity/index.js';
+import { addVKeyWitnesses, bytesToHex, hexToBytes, transactionId } from './identity/vendor.js';
 import type {
   VectorAgentConfig, VectorBalance, TokenBalance,
   TxResult, TokenTxResult, TxOutput, BuildTxResult,
@@ -35,18 +39,21 @@ export class VectorAgent {
   private readonly rateLimiter: RateLimiter;
   private readonly explorerUrl: string;
   private readonly registry: AgentRegistry;
+  private readonly endpoints: { ogmiosUrl: string; submitUrl: string; koiosUrl: string; koiosToken?: string };
   private lucid: LucidEvolution | null = null;
 
   constructor(config: VectorAgentConfig = {}) {
     const ogmiosUrl = config.ogmiosUrl ?? process.env.VECTOR_OGMIOS_URL ?? DEFAULT_OGMIOS_URL;
     const submitUrl = config.submitUrl ?? process.env.VECTOR_SUBMIT_URL ?? DEFAULT_SUBMIT_URL;
     const koiosUrl = config.koiosUrl ?? process.env.VECTOR_KOIOS_URL ?? DEFAULT_KOIOS_URL;
+    const koiosToken = config.koiosToken ?? process.env.VECTOR_KOIOS_TOKEN ?? undefined;
     this.explorerUrl = config.explorerUrl ?? process.env.VECTOR_EXPLORER_URL ?? DEFAULT_EXPLORER_URL;
 
     if (!ogmiosUrl) throw new VectorError('ogmiosUrl required (or set VECTOR_OGMIOS_URL)');
     if (!submitUrl) throw new VectorError('submitUrl required (or set VECTOR_SUBMIT_URL)');
 
-    this.provider = new OgmiosProvider({ ogmiosUrl, submitUrl, koiosUrl });
+    this.endpoints = { ogmiosUrl, submitUrl, koiosUrl, ...(koiosToken ? { koiosToken } : {}) };
+    this.provider = new OgmiosProvider(this.endpoints);
 
     // Wallet
     const mnemonic = config.mnemonic ?? process.env.VECTOR_MNEMONIC;
@@ -547,8 +554,64 @@ export class VectorAgent {
     }
   }
 
-  // ─── Agent Registry ───────────────────────────────────────────────
+  // ─── Identity registry (did:vector) ───────────────────────────────
 
+  /**
+   * The identity clients (registry, attestations, delegations, vaults,
+   * gateway) on this agent's Ogmios, Koios and submit endpoints. The
+   * deployment values come from `config` and the `VECTOR_IDENTITY_*`
+   * environment variables.
+   */
+  identity(config: IdentityConfigInput = {}): IdentityClients {
+    const settings = identityConfig({
+      ogmiosUrl: this.endpoints.ogmiosUrl,
+      submitUrl: this.endpoints.submitUrl,
+      koiosUrl: this.endpoints.koiosUrl,
+      ...(this.endpoints.koiosToken ? { koiosToken: this.endpoints.koiosToken } : {}),
+      ...config,
+    });
+    return createIdentityClients(new IdentityContext({ chain: this.provider, config: settings }));
+  }
+
+  /**
+   * Adds the key witnesses of this agent's wallet to a transaction (for
+   * example an unsigned identity transaction). The body bytes stay as they
+   * are, so other key holders can sign before or after.
+   */
+  async signTransaction(tx: UnsignedTx | string): Promise<string> {
+    const lucid = await this.ensureLucid();
+    const cbor = typeof tx === 'string' ? tx : tx.txCborHex;
+    const id = hexToBytes(transactionId(cbor));
+    const witnessSet = await lucid.wallet().signTx(CML.Transaction.from_cbor_hex(cbor));
+    const list = witnessSet.vkeywitnesses();
+    const witnesses = [];
+    for (let i = 0; i < (list?.len() ?? 0); i += 1) {
+      const witness = list.get(i);
+      const vkey = witness.vkey().to_raw_bytes();
+      const signature = witness.ed25519_signature().to_raw_bytes();
+      // The wallet signs CML's encoding of the body; it must equal the original body bytes.
+      if (!(await ed.verifyAsync(signature, id, vkey))) {
+        throw new TransactionError('the wallet signature does not cover this transaction ID');
+      }
+      witnesses.push({ vkey: bytesToHex(vkey), signature: bytesToHex(signature) });
+    }
+    if (witnesses.length === 0) throw new TransactionError('the wallet holds no key that this transaction needs');
+    return addVKeyWitnesses(cbor, witnesses);
+  }
+
+  /** Submits a signed transaction (CBOR hex) through the submit API; returns its ID. */
+  async submitTransaction(signedTxCborHex: string): Promise<string> {
+    return this.provider.submitTx(signedTxCborHex);
+  }
+
+  // ─── Legacy agent registry ────────────────────────────────────────
+
+  /**
+   * @deprecated New records belong in the identity registry: use
+   * `agent.identity().registry.register(...)`. Legacy identifiers minted at
+   * or after the cutoff slot resolve as `NOT_FOUND` (did:vector Part 1 §4).
+   * This method stays until the switch date.
+   */
   async registerAgent(params: {
     name: string;
     description: string;

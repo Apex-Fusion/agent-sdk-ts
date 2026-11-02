@@ -1,5 +1,8 @@
 // @ts-nocheck
-// Agent registry class — extracted from web3-mcp agent-network.ts.
+// Legacy agent registry (did:vector Part 1 §4): the deployed registry
+// be1a0a29… on Vector mainnet. The identity registry (src/identity) replaces
+// it; this class stays for legacy reads, the legacy Update and Deregister of
+// records that do not adopt, and (deprecated) new legacy registrations.
 // @ts-nocheck needed because Lucid's Data/Constr types are dynamically typed.
 
 import { Data, Constr, fromText, getAddressDetails, validatorToAddress, credentialToAddress } from '@lucid-evolution/lucid';
@@ -25,6 +28,13 @@ export class AgentRegistry {
     private readonly explorerUrl: string,
   ) {}
 
+  /**
+   * @deprecated New records belong in the identity registry: use
+   * `IdentityRegistry.register`. Legacy identifiers minted at or after the
+   * cutoff slot resolve as `NOT_FOUND` (did:vector Part 1 §4), and legacy
+   * records cannot take work through the new escrow. This method stays until
+   * the switch date.
+   */
   async register(
     lucid: LucidEvolution,
     params: {
@@ -147,7 +157,8 @@ export class AgentRegistry {
     const tx = await lucid.newTx()
       .collectFrom([utxo], spendRedeemer)
       .attach.SpendingValidator(registryScript)
-      .pay.ToAddressWithData(registryAddress, { kind: "inline", value: newDatum }, { lovelace: MIN_AP3X_DEPOSIT, [nftUnit]: 1n })
+      // The deployed Update keeps at least the input's AP3X in the record output.
+      .pay.ToAddressWithData(registryAddress, { kind: "inline", value: newDatum }, { lovelace: keptDeposit(utxo), [nftUnit]: 1n })
       .addSigner(walletAddress)
       .complete();
     const signedTx = await tx.sign.withWallet().complete();
@@ -181,11 +192,14 @@ export class AgentRegistry {
     const spendRedeemer = Data.to(new Constr(1, [])); // Deregister
     const mintRedeemer = Data.to(new Constr(1, []));  // Burn
 
+    // The deployed Deregister needs one output of at least 10 AP3X whose payment
+    // credential is the owner's key hash (Part 2 §9.1); the wallet address has it.
     const tx = await lucid.newTx()
       .collectFrom([utxo], spendRedeemer)
       .attach.SpendingValidator(registryScript)
       .mintAssets({ [nftUnit]: -1n }, mintRedeemer)
       .attach.MintingPolicy(registryScript)
+      .pay.ToAddress(walletAddress, { lovelace: MIN_AP3X_DEPOSIT })
       .addSigner(walletAddress)
       .complete();
     const signedTx = await tx.sign.withWallet().complete();
@@ -195,7 +209,7 @@ export class AgentRegistry {
     return {
       agentId,
       txHash,
-      depositReturned: lovelaceToAda(MIN_AP3X_DEPOSIT),
+      depositReturned: lovelaceToAda(utxo.assets.lovelace ?? MIN_AP3X_DEPOSIT),
       explorerUrl: explorerTxLink(this.explorerUrl, txHash),
     };
   }
@@ -235,7 +249,7 @@ export class AgentRegistry {
     const tx = await lucid.newTx()
       .collectFrom([utxo], spendRedeemer)
       .attach.SpendingValidator(registryScript)
-      .pay.ToAddressWithData(registryAddress, { kind: "inline", value: newDatum }, { lovelace: MIN_AP3X_DEPOSIT, [nftUnit]: 1n })
+      .pay.ToAddressWithData(registryAddress, { kind: "inline", value: newDatum }, { lovelace: keptDeposit(utxo), [nftUnit]: 1n })
       .addSigner(walletAddress)
       .complete();
     const signedTx = await tx.sign.withWallet().complete();
@@ -318,4 +332,10 @@ export class AgentRegistry {
       throw new RegistryError('Ownership check failed: your wallet does not own this agent.');
     }
   }
+}
+
+/** The AP3X of a legacy record output after an Update: at least the input's AP3X and the 10 AP3X deposit. */
+function keptDeposit(utxo: UTxO): bigint {
+  const input = utxo.assets.lovelace ?? 0n;
+  return input > MIN_AP3X_DEPOSIT ? input : MIN_AP3X_DEPOSIT;
 }

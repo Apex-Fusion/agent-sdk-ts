@@ -37,7 +37,8 @@ export interface IVectorAgentMCP {
   deployContract(params: { scriptCbor: string; scriptType?: string; initialDatum?: string; lovelace?: number }): Promise<DeployContractResult>;
   interactContract(params: { scriptCbor: string; scriptType?: string; action?: 'spend' | 'lock'; redeemer?: string; datum?: string; lovelace?: number; utxoRef?: { txHash: string; outputIndex: number } }): Promise<InteractContractResult>;
 
-  // Registry
+  // Legacy registry (did:vector Part 1 §4)
+  /** @deprecated New records belong in the identity registry (`IdentityRegistry.register`). Kept until the switch date. */
   registerAgent(params: { name: string; description: string; capabilities: string[]; framework: string; endpoint: string }): Promise<AgentRegistrationResult>;
   discoverAgents(params?: { capability?: string; framework?: string; limit?: number }): Promise<AgentProfile[]>;
   getAgentProfile(agentId: string): Promise<AgentProfile>;

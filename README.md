@@ -28,7 +28,7 @@ npm install @apexfusion/agent-sdk
 
 ## Networks
 
-Vector runs a public testnet and mainnet. The SDK talks to whichever endpoints you configure:
+Vector runs a public testnet and mainnet. Since 0.2.0 the defaults are the mainnet endpoints; set the variables below for the testnet:
 
 | Variable | Testnet | Mainnet |
 |---|---|---|
@@ -97,12 +97,68 @@ await agent.deployContract({ scriptCbor, scriptType?, initialDatum?, lovelace? }
 await agent.interactContract({ scriptCbor, scriptType?, action?, redeemer?, datum?, lovelace?, utxoRef? })
 ```
 
-### Agent Registry
+### Identity registry (did:vector)
+
+The identity registry holds one record per agent: a controller key, listed keys, parties, a profile and a status ([did:vector method](https://github.com/Apex-Fusion/agents-marketplace/blob/main/docs/did-vector-method.md)). The clients build **unsigned** transactions and return every key hash that must sign (`requiredSigners`). Each key holder signs in turn; the SDK never stores keys.
 
 ```typescript
-await agent.registerAgent({ name, description, capabilities, framework, endpoint })
+import { VectorAgent, PartySpec, CONTROLLER_SET, ed25519Key, signTransaction } from '@apexfusion/agent-sdk';
+
+const agent = new VectorAgent({ mnemonic });
+const { registry, attestations, delegations, vaults, gateway, context } = agent.identity();
+const fundingAddress = await agent.getAddress();
+
+const tx = await registry.register({
+  fundingAddress,                              // pays the 10 AP3X deposit and the fee
+  controller: controllerPublicKeyHex,          // Ed25519, 32 bytes
+  name: 'my agent',
+  capabilities: ['llm.text.generate.v1'],
+  parties: [new PartySpec({ role: 'Accountable', signer: CONTROLLER_SET })],
+  keys: [ed25519Key(supplierPublicKeyHex, 1 + 8)], // authentication + transaction
+});
+let signed = await agent.signTransaction(tx);               // the wallet key (funding input)
+signed = await signTransaction(signed, controllerPrivateKeyHex, supplierPrivateKeyHex);
+await agent.submitTransaction(signed);
+console.log(`did:vector:${tx.id}`);
+```
+
+Without a `VectorAgent`: `createIdentityClients()` (configuration from the environment) or `createIdentityClients(new IdentityContext({ chain, config }))`.
+
+| Client | Operations |
+|---|---|
+| `registry` | `register` (with `parent`: a subagent), `adopt`, `update`, `changeController`, `suspend`, `unsuspend`, `revoke`, `retire`, `reclaim`, `setSuccessor`, `startRecovery`, `cancelRecovery`, `completeRecovery`, `endSubagents`; reads `record`, `findRecord`, `resolve`, `currentRecord`, `nextIdentifier` |
+| `attestations` | `attest` (optional `signEnvelope` for the COSE_Sign1 envelope), `revoke`, `contest`, `withdraw`, `get` |
+| `delegations` | `delegate`, `undelegate`, `checkUse`, `get`, `list` (a delegate key in use by another live delegation is refused) |
+| `vaults` | `open`, `pay` (escrows copied from listed new adverts), `close`, `get`, `list` |
+| `gateway` | `resolve(did, { versionId?, versionTime?, expandRelativeUrls?, documentOnly? })`, `currentRecord(idOrDid)` |
+
+Every build reads the chain: the protocol parameters (with the Plutus V3 cost model), the funding outputs, the tip and, when Module-1 consents, the whole reward balance of Module-1. The validity range is `[tip − 60 s, tip + validForSeconds]` (default 900 s; at most one hour). Each transaction is evaluated with Ogmios and built again with the measured execution units (`evaluate: false` skips this; the fee is then about 2 AP3X). A builder that the contract would reject throws `IdentityRuleError` with a stable `reason`; a missing output throws `IdentityLookupError`; a missing setting throws `IdentityConfigError`.
+
+Configuration (the same names as the Python SDK):
+
+| Variable | Meaning |
+|---|---|
+| `VECTOR_IDENTITY_LEGACY_ROOT` | Allowlist Merkle root (required for transactions) |
+| `VECTOR_IDENTITY_CONFIG_SEED` | `<tx id>#<index>` of the `config_seal` seed (required for transactions) |
+| `VECTOR_IDENTITY_POLICY_ID` | Optional cross-check of the derived identity policy ID |
+| `VECTOR_IDENTITY_LEGACY_HASH` | Default `be1a0a29…` |
+| `VECTOR_IDENTITY_REF_UTXO`, `VECTOR_ATTESTATION_REF_UTXO`, `VECTOR_DELEGATION_REF_UTXO`, `VECTOR_VAULT_REF_UTXO`, `VECTOR_LEGACY_REGISTRY_REF_UTXO` | Reference-script outputs; without one, the transaction carries the script |
+| `VECTOR_MODULE1_REF_UTXO` | Reference script of Module-1, needed when Module-1 consents |
+| `VECTOR_IDENTITY_CONFIG_UTXO` | The configuration record (default: found at the `config_holder` address) |
+| `VECTOR_IDENTITY_GATEWAY_URL` | Default `https://id.vector.apexfusion.org` |
+| `VECTOR_KOIOS_TOKEN` | Optional Koios bearer token |
+| `VECTOR_MARKETPLACE_INDEXER_URL` | Advert listing for `vaults.pay` (or pass `advertListed`) |
+
+The builders, codecs and blueprints are vendored unchanged from agents-marketplace; `VENDORED-FROM.md` names the commit and the SHA-256 of each file. Update them with `npm run sync:identity -- <agents-marketplace path>`.
+
+### Legacy agent registry
+
+The legacy registry (`be1a0a29…`) stays readable. **New legacy registrations are deprecated**: legacy identifiers minted at or after the cutoff slot resolve as `NOT_FOUND`, and legacy records cannot take work through the new escrow. Adopt a legacy record with `registry.adopt(...)`.
+
+```typescript
+await agent.registerAgent({ name, description, capabilities, framework, endpoint }) // deprecated
 await agent.discoverAgents({ capability?, framework?, limit? })
-await agent.getAgentProfile(agentId)
+await agent.getAgentProfile(agentId)        // did:vector:agent:<policy>:<id> or did:vector:<id>
 await agent.updateAgent(agentId, { name?, description?, capabilities?, framework?, endpoint? })
 await agent.deregisterAgent(agentId)
 await agent.transferAgent(agentId, newOwnerAddress)

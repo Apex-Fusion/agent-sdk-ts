@@ -9,7 +9,7 @@ export function lovelaceToAda(lovelace: string | number | bigint): string {
  * Build an explorer transaction link.
  */
 export function explorerTxLink(explorerUrl: string, txHash: string): string {
-  return `${explorerUrl}/transaction/${txHash}`;
+  return `${explorerUrl.replace(/\/+$/, '')}/transaction/${txHash}`;
 }
 
 /**
