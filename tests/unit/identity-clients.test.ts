@@ -19,7 +19,9 @@ import {
   identityConfig,
   IdentityContext,
   IdentityGateway,
+  MAINNET_IDENTITY_DEPLOYMENT,
   OgmiosProvider,
+  parseOutputReference,
   PartySpec,
   principalKeyDelegator,
   PURPOSE_ASSERTION,
@@ -229,7 +231,6 @@ describe('identityConfig', () => {
     });
     expect(Object.values(IDENTITY_ENV_VARS)).toContain('VECTOR_IDENTITY_POLICY_ID');
     expect(() => identityConfig({}, { VECTOR_IDENTITY_CONFIG_SEED: 'nope' })).toThrow(/VECTOR_IDENTITY_CONFIG_SEED/);
-    expect(() => new IdentityContext({ config: identityConfig({}, {}) }).scripts).toThrow(/VECTOR_IDENTITY_LEGACY_ROOT, VECTOR_IDENTITY_CONFIG_SEED/);
     const wrongPolicy = identityConfig({ identityPolicyId: '00'.repeat(28) }, env);
     expect(() => new IdentityContext({ config: wrongPolicy }).scripts).toThrow(IdentityConfigError);
   });
@@ -240,6 +241,106 @@ describe('identityConfig', () => {
     expect(d.configSeal.hash).toBe('a12c8b6106f2a6704b64cfa1669663d6e757197a77d2ea6f685ad43a');
     expect(d.advert.hash).toBe('f36e366e06d44806' + d.advert.hash.slice(16));
     expect(d.legacy?.address).toBe('addr1wxlp5z3fztdpsp6ha57dvx6khw82kqvgcxwu8s8rjykjcqghprf42');
+  });
+
+  /** The published mainnet record, vendored from agents-marketplace (VENDORED-FROM.md). */
+  const published = JSON.parse(readFileSync(
+    join(SDK_ROOT, 'tests/vendor/agents-marketplace/contracts/identity-marketplace/deploy/mainnet/deployment.json'),
+    'utf8',
+  )) as {
+    network: string;
+    legacy_hash: string;
+    legacy_root: string;
+    config_seed: string;
+    identity_hash: string;
+    scripts: Record<string, { hash: string; address: string; compiled_code: string }>;
+    refs: Record<string, string>;
+  };
+  const publishedRef = (name: string) => parseOutputReference(published.refs[name]!);
+  const SCRIPT_NAMES = {
+    configHolder: 'config_holder', configSeal: 'config_seal', identity: 'identity', attestation: 'attestation',
+    delegation: 'delegation', escrow: 'escrow', vault: 'vault', advert: 'advert',
+  } as const;
+
+  it('takes the published mainnet deployment when nothing is set and derives the 8 script hashes of deployment.json', () => {
+    expect(published.network).toBe('mainnet');
+    expect(MAINNET_IDENTITY_DEPLOYMENT).toEqual({
+      legacyHash: published.legacy_hash,
+      legacyRoot: published.legacy_root,
+      configSeed: parseOutputReference(published.config_seed),
+      identityPolicyId: published.identity_hash,
+      identityRef: publishedRef('identity'),
+      attestationRef: publishedRef('attestation'),
+      delegationRef: publishedRef('delegation'),
+      vaultRef: publishedRef('vault'),
+      escrowRef: publishedRef('escrow'),
+      advertRef: publishedRef('advert'),
+    });
+    const config = identityConfig({}, {});
+    expect(config).toMatchObject({
+      legacyRoot: published.legacy_root,
+      configSeed: parseOutputReference(published.config_seed),
+      legacyHash: published.legacy_hash,
+      identityPolicyId: published.identity_hash,
+      identityRef: publishedRef('identity'),
+      attestationRef: publishedRef('attestation'),
+      delegationRef: publishedRef('delegation'),
+      vaultRef: publishedRef('vault'),
+      legacyRef: null,
+      module1Ref: null,
+      configUtxo: null,
+    });
+    // The context derives the scripts and checks the derived policy ID against the published one.
+    const scripts = new IdentityContext({ config }).scripts;
+    expect(Object.keys(published.scripts).sort()).toEqual(Object.values(SCRIPT_NAMES).sort());
+    for (const [field, name] of Object.entries(SCRIPT_NAMES)) {
+      const script = scripts[field as keyof typeof SCRIPT_NAMES];
+      const record = published.scripts[name]!;
+      expect(script.hash, name).toBe(record.hash);
+      expect(script.address, name).toBe(record.address);
+      expect(script.compiledCode, name).toBe(record.compiled_code);
+    }
+  });
+
+  it('lets a set value win over a mainnet default and keeps the rules for partial settings', () => {
+    const own = { VECTOR_IDENTITY_LEGACY_ROOT: '11'.repeat(32), VECTOR_IDENTITY_CONFIG_SEED: `${'ab'.repeat(32)}#24` };
+    const ref = identityConfig({}, { VECTOR_IDENTITY_REF_UTXO: `${'cd'.repeat(32)}#1` });
+    expect(ref.identityRef).toEqual({ txHash: 'cd'.repeat(32), index: 1 });
+    expect(ref.attestationRef).toEqual(MAINNET_IDENTITY_DEPLOYMENT.attestationRef);
+    expect(identityConfig({ identityRef: null }, {}).identityRef).toBeNull();
+    // Another root and seed: their own deployment, without the published policy ID and reference outputs.
+    expect(identityConfig({}, own)).toMatchObject({
+      legacyRoot: '11'.repeat(32), configSeed: { txHash: 'ab'.repeat(32), index: 24 },
+      identityPolicyId: null, identityRef: null, attestationRef: null, delegationRef: null, vaultRef: null,
+    });
+    // The published root and seed, set by hand, give the same configuration as no setting.
+    expect(identityConfig({}, {
+      VECTOR_IDENTITY_LEGACY_ROOT: MAINNET_IDENTITY_DEPLOYMENT.legacyRoot,
+      VECTOR_IDENTITY_CONFIG_SEED: published.config_seed,
+    })).toEqual(identityConfig({}, {}));
+    // The root and the seed come together: one of them alone gets no default for the other.
+    expect(() => new IdentityContext({ config: identityConfig({}, { VECTOR_IDENTITY_LEGACY_ROOT: own.VECTOR_IDENTITY_LEGACY_ROOT }) }).scripts)
+      .toThrow(/missing deployment values: VECTOR_IDENTITY_CONFIG_SEED \(/);
+    expect(identityConfig({}, { VECTOR_IDENTITY_LEGACY_HASH: '00'.repeat(28) }))
+      .toMatchObject({ legacyRoot: null, configSeed: null, identityPolicyId: null, identityRef: null });
+    // A policy ID that contradicts the published values fails when the context derives the scripts.
+    expect(() => new IdentityContext({ config: identityConfig({}, { VECTOR_IDENTITY_POLICY_ID: '00'.repeat(28) }) }).scripts)
+      .toThrow(/VECTOR_IDENTITY_POLICY_ID is 0{56}, but/);
+  });
+
+  it('sets no deployment value on the testnet', () => {
+    for (const config of [
+      identityConfig({}, { VECTOR_IDENTITY_NETWORK: 'testnet' }),
+      identityConfig({ network: 'testnet' }, { VECTOR_IDENTITY_NETWORK: 'mainnet' }),
+    ]) {
+      expect(config).toMatchObject({
+        legacyRoot: null, configSeed: null, identityPolicyId: null,
+        identityRef: null, attestationRef: null, delegationRef: null, vaultRef: null,
+      });
+      expect(() => new IdentityContext({ config }).scripts).toThrow(/VECTOR_IDENTITY_LEGACY_ROOT, VECTOR_IDENTITY_CONFIG_SEED/);
+    }
+    expect(identityConfig({}, { VECTOR_IDENTITY_NETWORK: 'testnet', VECTOR_IDENTITY_LEGACY_ROOT: '11'.repeat(32) }).legacyRoot).toBe('11'.repeat(32));
+    expect(() => identityConfig({}, { VECTOR_IDENTITY_NETWORK: 'preprod' })).toThrow(/VECTOR_IDENTITY_NETWORK: expected mainnet or testnet/);
   });
 });
 

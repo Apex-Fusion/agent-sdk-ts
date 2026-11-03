@@ -560,7 +560,8 @@ export class VectorAgent {
    * The identity clients (registry, attestations, delegations, vaults,
    * gateway) on this agent's Ogmios, Koios and submit endpoints. The
    * deployment values come from `config` and the `VECTOR_IDENTITY_*`
-   * environment variables.
+   * environment variables. On mainnet (the default network), unset values
+   * take the published values of `MAINNET_IDENTITY_DEPLOYMENT`.
    */
   identity(config: IdentityConfigInput = {}): IdentityClients {
     const settings = identityConfig({

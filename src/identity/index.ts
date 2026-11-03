@@ -8,8 +8,8 @@ import type { IdentityGateway } from './gateway.js';
 import { IdentityRegistry } from './registry.js';
 import { Vaults, type AdvertListed } from './vaults.js';
 
-export { IDENTITY_ENV_VARS, identityConfig, parseOutputReference } from './config.js';
-export type { IdentityConfig, IdentityConfigField, IdentityConfigInput } from './config.js';
+export { IDENTITY_ENV_VARS, identityConfig, MAINNET_IDENTITY_DEPLOYMENT, parseOutputReference } from './config.js';
+export type { IdentityConfig, IdentityConfigField, IdentityConfigInput, IdentityNetwork } from './config.js';
 export { IdentityConfigError, IdentityLookupError, IdentityRuleError } from './errors.js';
 export {
   builderProtocolParameters,
