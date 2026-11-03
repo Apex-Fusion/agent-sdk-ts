@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.2.0 (unreleased)
+## 0.2.0
 
 This release adds the clients of the Vector identity registry (`did:vector`). It has breaking changes.
 
