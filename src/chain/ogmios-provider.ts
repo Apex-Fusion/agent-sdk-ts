@@ -22,6 +22,7 @@ import type {
 } from '@lucid-evolution/lucid';
 import { z } from 'zod';
 import { ConnectionError, TransactionError } from '../errors.js';
+import { addressFromBytes, rewardAddressBytes, type NetworkId } from '../identity/vendor.js';
 import {
   ogmiosUtxoToChainUtxo,
   type ChainUtxo,
@@ -40,14 +41,15 @@ export interface OgmiosProviderConfig {
   koiosToken?: string;
 }
 
-// Ogmios v6 answers (https://ogmios.dev/api/v6/) and the Koios v1 `asset_utxos` rows that the identity reads use.
+// Ogmios v6 answers (https://ogmios.dev/api/v6/) and the Koios v1 `asset_utxos` and `account_info` rows that the identity reads use.
 const RPC_ENVELOPE = z.object({ result: z.unknown().optional(), error: z.unknown().optional() });
 const TIP = z.union([z.literal('origin'), z.object({ slot: z.number().int().nonnegative() })]);
 const ERA_SUMMARIES = z.array(z.object({
   start: z.object({ time: z.object({ seconds: z.number() }), slot: z.number().int().nonnegative() }),
   parameters: z.object({ slotLength: z.object({ milliseconds: z.number().int().positive() }) }),
 })).min(1);
-const LOVELACE = z.object({ ada: z.object({ lovelace: z.union([z.number().int().nonnegative(), z.string().regex(/^\d+$/)]) }) });
+const QUANTITY = z.union([z.number().int().nonnegative(), z.string().regex(/^\d+$/)]);
+const LOVELACE = z.object({ ada: z.object({ lovelace: QUANTITY }) });
 const REWARD_SUMMARIES = z.array(z.object({ from: z.string().optional(), credential: z.string(), rewards: LOVELACE }));
 const REWARD_SUMMARY_MAP = z.record(z.string(), z.object({ from: z.string().optional(), rewards: LOVELACE }));
 const EVALUATION = z.array(z.object({
@@ -59,6 +61,7 @@ const KOIOS_ASSET_UTXOS = z.array(z.object({
   tx_index: z.number().int().nonnegative(),
   is_spent: z.boolean().optional(),
 }));
+const KOIOS_ACCOUNT_INFO = z.array(z.object({ stake_address: z.string(), status: z.string(), rewards_available: QUANTITY }));
 
 export class OgmiosProvider implements Provider, IdentityChain {
   private ogmiosUrl: string;
@@ -488,15 +491,41 @@ export class OgmiosProvider implements Provider, IdentityChain {
     return (await this.queryUtxosByRefs(refs)).filter((utxo) => (utxo.assets[unit] ?? 0n) > 0n);
   }
 
-  /** Ogmios `queryLedgerState/rewardAccountSummaries` for one script credential. */
-  async getRewardBalance(scriptHash: string): Promise<bigint | null> {
+  /**
+   * The reward balance of `Script(scriptHash)`: Ogmios `queryLedgerState/rewardAccountSummaries`, else Koios
+   * `account_info`. Ogmios gives no summary for a registered credential that is not delegated (Module-1 can
+   * never be delegated), so Koios then tells whether the reward address is registered. The balance is never
+   * taken as 0 without that check: anybody can pay into a reward account.
+   */
+  async getRewardBalance(scriptHash: string, networkId: NetworkId): Promise<bigint | null> {
     const result = await this.rpc('queryLedgerState/rewardAccountSummaries', { scripts: [scriptHash] });
     // Ogmios 6.13 and later answer a list; earlier v6 versions answer an object keyed by the credential.
     const entries = Array.isArray(result)
       ? REWARD_SUMMARIES.parse(result)
       : Object.entries(REWARD_SUMMARY_MAP.parse(result ?? {})).map(([credential, summary]) => ({ ...summary, credential }));
     const match = entries.find((e) => e.credential === scriptHash && (e.from === undefined || e.from === 'script'));
-    return match === undefined ? null : BigInt(match.rewards.ada.lovelace);
+    if (match !== undefined) return BigInt(match.rewards.ada.lovelace);
+    return this.koiosRewardBalance(addressFromBytes(rewardAddressBytes({ type: 'Script', hash: scriptHash }, networkId)));
+  }
+
+  /** Koios `account_info` of one reward address: `rewards_available` when it is registered, else null. */
+  private async koiosRewardBalance(rewardAddress: string): Promise<bigint | null> {
+    if (!this.koiosUrl) {
+      throw new ConnectionError(`Ogmios has no reward summary for ${rewardAddress}, and only Koios can tell whether it is registered: set VECTOR_KOIOS_URL (koiosUrl).`);
+    }
+    let response: Response;
+    try {
+      response = await fetch(this.koiosEndpoint('account_info'), {
+        method: 'POST',
+        headers: this.koiosHeaders(),
+        body: JSON.stringify({ _stake_addresses: [rewardAddress] }),
+      });
+    } catch (err) {
+      throw new ConnectionError(`Cannot reach Koios at ${this.koiosUrl}: ${err}`);
+    }
+    if (!response.ok) throw new ConnectionError(`Koios account_info failed (${response.status}): ${await response.text()}`);
+    const account = KOIOS_ACCOUNT_INFO.parse(await response.json()).find((row) => row.stake_address === rewardAddress);
+    return account?.status === 'registered' ? BigInt(account.rewards_available) : null;
   }
 
   /** Ogmios `evaluateTransaction`: the units of each redeemer. A script failure throws `TransactionError`. */

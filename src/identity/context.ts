@@ -409,7 +409,7 @@ export class IdentityContext {
   async module1RewardBalance(): Promise<Record<string, bigint>> {
     const m1 = await this.module1();
     if (m1 === null) throw new IdentityLookupError('the configuration record is not sealed: Module-1 cannot be a party');
-    const balance = await this.chain.getRewardBalance(m1);
+    const balance = await this.chain.getRewardBalance(m1, this.networkId);
     if (balance === null) throw new IdentityLookupError(`the stake credential of Module-1 (${m1}) is not registered: it cannot approve`);
     return { [m1]: balance };
   }

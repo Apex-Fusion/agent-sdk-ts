@@ -132,7 +132,7 @@ Without a `VectorAgent`: `createIdentityClients()` (configuration from the envir
 | `vaults` | `open`, `pay` (escrows copied from listed new adverts), `close`, `get`, `list` |
 | `gateway` | `resolve(did, { versionId?, versionTime?, expandRelativeUrls?, documentOnly? })`, `currentRecord(idOrDid)` |
 
-Every build reads the chain: the protocol parameters (with the Plutus V3 cost model), the funding outputs, the tip and, when Module-1 consents, the whole reward balance of Module-1. The validity range is `[tip − 60 s, tip + validForSeconds]` (default 900 s; at most one hour). Each transaction is evaluated with Ogmios and built again with the measured execution units (`evaluate: false` skips this; the fee is then about 2 AP3X). A builder that the contract would reject throws `IdentityRuleError` with a stable `reason`; a missing output throws `IdentityLookupError`; a missing setting throws `IdentityConfigError`.
+Every build reads the chain: the protocol parameters (with the Plutus V3 cost model), the funding outputs, the tip and, when Module-1 consents, the whole reward balance of Module-1. Ogmios gives no reward summary for a registered stake credential without delegation, and Module-1 has no delegation: the balance then comes from Koios `account_info`. The validity range is `[tip − 60 s, tip + validForSeconds]` (default 900 s; at most one hour). Each transaction is evaluated with Ogmios and built again with the measured execution units (`evaluate: false` skips this; the fee is then about 2 AP3X). A builder that the contract would reject throws `IdentityRuleError` with a stable `reason`; a missing output throws `IdentityLookupError`; a missing setting throws `IdentityConfigError`.
 
 Configuration (the same names as the Python SDK):
 

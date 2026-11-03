@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import * as ed from '@noble/ed25519';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   agentDelegator,
   CONTROLLER_SET,
@@ -244,7 +244,8 @@ describe('identityConfig', () => {
 });
 
 describe('OgmiosProvider identity reads', () => {
-  function provider(answers: Record<string, unknown>, koios?: unknown) {
+  /** A provider from a fresh module that sees the mocked fetch: Ogmios answers by method, Koios answers `koios`. */
+  async function provider(answers: Record<string, unknown>, koios?: unknown) {
     const calls: Array<{ url: string; body: unknown; headers: Record<string, string> }> = [];
     vi.stubGlobal('fetch', undefined);
     const fetchMock = vi.fn(async (url: string, init: { body: string; headers: Record<string, string> }) => {
@@ -253,8 +254,16 @@ describe('OgmiosProvider identity reads', () => {
       if (url.includes('koios')) return new Response(JSON.stringify(koios), { status: 200 });
       return new Response(JSON.stringify({ jsonrpc: '2.0', result: answers[body.method] }), { status: 200 });
     });
-    return { fetchMock, calls };
+    vi.doMock('cross-fetch', () => ({ default: fetchMock }));
+    vi.resetModules();
+    const { OgmiosProvider: Fresh } = await import('../../src/chain/ogmios-provider.js'); // a fresh module that sees the mocked fetch
+    const p = new Fresh({ ogmiosUrl: 'https://ogmios.example', submitUrl: 'https://submit.example', koiosUrl: 'https://koios.example/api/v1', koiosToken: 't0ken' });
+    return { p, calls };
   }
+
+  afterEach(() => {
+    vi.doUnmock('cross-fetch');
+  });
 
   it('parses Ogmios v6 outputs, reward summaries in both shapes, the slot clock and Koios token lookups', async () => {
     const utxo = {
@@ -262,28 +271,54 @@ describe('OgmiosProvider identity reads', () => {
       value: { ada: { lovelace: 17000000 }, ['cd'.repeat(28)]: { '0a': 1 } },
       datum: 'D87980', script: { language: 'plutus:v3', cbor: '450101002499' },
     };
-    const { fetchMock, calls } = provider({
+    const { p, calls } = await provider({
       'queryLedgerState/utxo': [utxo],
       'queryLedgerState/rewardAccountSummaries': [{ from: 'script', credential: 'ee'.repeat(28), rewards: { ada: { lovelace: 42 } }, deposit: { ada: { lovelace: 2 } } }],
       'queryNetwork/startTime': '2025-08-29T16:40:00Z',
       'queryLedgerState/eraSummaries': [{ start: { time: { seconds: 0 }, slot: 0 }, parameters: { slotLength: { milliseconds: 1000 } } }],
       'queryNetwork/tip': { slot: 37157464, id: 'ff' },
     }, [{ tx_hash: 'ab'.repeat(32), tx_index: 1, is_spent: false }]);
-    vi.doMock('cross-fetch', () => ({ default: fetchMock }));
-    vi.resetModules();
-    const { OgmiosProvider: Fresh } = await import('../../src/chain/ogmios-provider.js'); // a fresh module that sees the mocked fetch
-    const p = new Fresh({ ogmiosUrl: 'https://ogmios.example', submitUrl: 'https://submit.example', koiosUrl: 'https://koios.example/api/v1', koiosToken: 't0ken' });
     const [u] = await p.queryUtxosAt('addr1x');
     expect(u).toEqual({ ref: { txHash: 'ab'.repeat(32), index: 1 }, address: 'addr1x', lovelace: 17_000_000n, assets: { [`${'cd'.repeat(28)}0a`]: 1n }, datumHex: 'd87980', scriptRef: '450101002499' });
-    expect(await p.getRewardBalance('ee'.repeat(28))).toBe(42n);
+    expect(await p.getRewardBalance('ee'.repeat(28), 1)).toBe(42n);
     expect(await p.getSlotConfig()).toEqual({ zeroTimeMs: 1_756_485_600_000, zeroSlot: 0, slotLengthMs: 1000 });
     expect(await p.getTipSlot()).toBe(37157464);
     expect(await p.queryTokenUtxos('cd'.repeat(28), '0a')).toHaveLength(1);
     const koiosCall = calls.find((c) => c.url.includes('koios'))!;
     expect(koiosCall.url).toBe('https://koios.example/api/v1/asset_utxos');
     expect(koiosCall.headers.Authorization).toBe('Bearer t0ken');
-    vi.doUnmock('cross-fetch');
     expect(OgmiosProvider).toBeDefined();
+  });
+
+  describe('reward balance of a script credential', () => {
+    const hash = 'a38f97f3d0228eae7df6785986d377e34034d43c2aa46aa9609aef89';
+    // The reward address that Koios lists for this script credential: CIP-19 header 0xf1 (script, network 1).
+    const rewardAddress = 'stake17x3cl9ln6q3gatna7eu9npknwl35qdx58s42g64fvzdwlzg3fnwlc';
+    const noSummary = { 'queryLedgerState/rewardAccountSummaries': [] };
+    const row = { stake_address: rewardAddress, delegated_pool: null, deposit: '500000000' };
+
+    it('takes the Ogmios summary when there is one', async () => {
+      const { p, calls } = await provider({
+        'queryLedgerState/rewardAccountSummaries': [{ from: 'script', credential: hash, rewards: { ada: { lovelace: 42 } } }],
+      });
+      expect(await p.getRewardBalance(hash, 1)).toBe(42n);
+      expect(calls.map((c) => c.url)).toEqual(['https://ogmios.example']);
+    });
+
+    it('reads Koios account_info when Ogmios has no summary (a registered credential without delegation)', async () => {
+      const { p, calls } = await provider(noSummary, [{ ...row, status: 'registered', rewards_available: '1500000' }]);
+      expect(await p.getRewardBalance(hash, 1)).toBe(1_500_000n);
+      expect(calls.map((c) => c.url)).toEqual(['https://ogmios.example', 'https://koios.example/api/v1/account_info']);
+      expect(calls[1]!.body).toEqual({ _stake_addresses: [rewardAddress] });
+      expect(calls[1]!.headers.Authorization).toBe('Bearer t0ken');
+    });
+
+    it('is null when Koios does not list the reward address as registered', async () => {
+      for (const koios of [[{ ...row, status: 'not registered', rewards_available: '7' }], []]) {
+        const { p } = await provider(noSummary, koios);
+        expect(await p.getRewardBalance(hash, 1)).toBeNull();
+      }
+    });
   });
 });
 

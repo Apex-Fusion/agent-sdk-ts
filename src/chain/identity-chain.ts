@@ -10,7 +10,7 @@
  */
 import type { ProtocolParameters as LucidProtocolParameters } from '@lucid-evolution/lucid';
 import { z } from 'zod';
-import type { ExUnits, OutputReference, SlotConfig, Utxo } from '../identity/vendor.js';
+import type { ExUnits, NetworkId, OutputReference, SlotConfig, Utxo } from '../identity/vendor.js';
 
 export type { OutputReference, SlotConfig };
 
@@ -34,8 +34,11 @@ export interface IdentityChain {
   queryUtxosByRefs(refs: readonly OutputReference[]): Promise<ChainUtxo[]>;
   /** The unspent outputs that hold the token `policyId.assetName`. */
   queryTokenUtxos(policyId: string, assetName: string): Promise<ChainUtxo[]>;
-  /** The reward balance of the stake credential `Script(scriptHash)`, or null when it is not registered. */
-  getRewardBalance(scriptHash: string): Promise<bigint | null>;
+  /**
+   * The reward balance of the stake credential `Script(scriptHash)`, or null when it is not registered.
+   * `networkId` gives the reward address (CIP-19 header `0xf0 | networkId`).
+   */
+  getRewardBalance(scriptHash: string, networkId: NetworkId): Promise<bigint | null>;
   /** The execution units of each redeemer of a transaction. Throws when a script fails. */
   evaluateRedeemers(txCborHex: string): Promise<RedeemerUnits>;
   /** Submits a signed transaction and returns its ID. */
