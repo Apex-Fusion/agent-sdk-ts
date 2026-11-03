@@ -7,8 +7,8 @@ against the files in both directions.
 | Field | Value |
 |---|---|
 | Source | https://github.com/Apex-Fusion/agents-marketplace |
-| Commit | `67054f6661910e0163aff8ed3f24d2695ba48207` |
-| Commit date | 2026-11-02T21:39:17+01:00 |
+| Commit | `4c95c3f7745f013f26a33e66e992989490ffb05e` |
+| Commit date | 2026-11-03T12:12:06+01:00 |
 | Local changes in the copied files | none |
 | Command | `node scripts/sync-identity.mjs <agents-marketplace path>` |
 
@@ -54,6 +54,7 @@ Each copy keeps its source path below its vendor root.
 | `src/vendor/agents-marketplace/packages/shared/src/network.ts` | `packages/shared/src/network.ts` | `753e03929b25eaef2177d2de9ac80c496cea067c1d2e50be51210ecf65ac38a4` |
 | `src/vendor/agents-marketplace/packages/shared/src/tx/types.ts` | `packages/shared/src/tx/types.ts` | `7dfe647312c71996c01fa0b3f3641f6133d58477aca772cf63f597e50d16db87` |
 | `src/vendor/agents-marketplace/tests/legacy-registry/fixtures/agent-registry.plutus.json` | `tests/legacy-registry/fixtures/agent-registry.plutus.json` | `00eb21bf150b9f4ee4ded0b7a7c4779d91284cf795bde653d5702355520ad215` |
+| `tests/vendor/agents-marketplace/contracts/identity-marketplace/deploy/mainnet/deployment.json` | `contracts/identity-marketplace/deploy/mainnet/deployment.json` | `5d9fab437aff5cef9e3fedf85f696c5ff0526766503671d715fe69ace8b0c5b5` |
 | `tests/vendor/agents-marketplace/tests/legacy-registry/harness/blueprint.ts` | `tests/legacy-registry/harness/blueprint.ts` | `8084d6c90fed68753c791a2ab84a3a62d6b86f0c2154819c72ac93ea76470de7` |
 | `tests/vendor/agents-marketplace/tests/legacy-registry/harness/cbor.ts` | `tests/legacy-registry/harness/cbor.ts` | `9ae35219769a115fa43f71cf82d159f3964380975db3408c9b881abaca018e46` |
 | `tests/vendor/agents-marketplace/tests/legacy-registry/harness/data.ts` | `tests/legacy-registry/harness/data.ts` | `6858cd26fc33ed70860763e682ac122fdff383118ead6adaa8967fff4d8d4d24` |

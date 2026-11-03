@@ -10,7 +10,10 @@
 //   - the advert codec and the canonical JSON helper that the vault client needs;
 //   - the identity-marketplace blueprint (contracts/identity-marketplace/plutus.json)
 //     and the deployed legacy-registry blueprint (tests/legacy-registry/fixtures);
-//   - the minimal `aiken tx simulate` harness of tests/legacy-registry/harness.
+//   - the minimal `aiken tx simulate` harness of tests/legacy-registry/harness;
+//   - the published mainnet deployment record
+//     (contracts/identity-marketplace/deploy/mainnet/deployment.json), which the
+//     tests compare with the mainnet defaults of the configuration.
 // Each file keeps its path below the vendor root, so the relative imports
 // between the copies stay valid. Then the script writes VENDORED-FROM.md with
 // the source commit and the SHA-256 of each file. tests/unit/vendored.test.ts
@@ -50,6 +53,11 @@ const RUNTIME_FILES = [
 const TEST_ENTRIES = [
   "tests/legacy-registry/harness/blueprint.ts",
   "tests/legacy-registry/harness/simulate.ts",
+];
+
+/** Test data files below TEST_ROOT. */
+const TEST_FILES = [
+  "contracts/identity-marketplace/deploy/mainnet/deployment.json",
 ];
 
 const IMPORT_PATTERN = /(?:^|[\s;])(?:import|export)\s(?:[^;'"]*?\sfrom\s)?["']([^"']+)["']/g;
@@ -109,7 +117,7 @@ function main() {
   }
 
   const runtime = [...closure(source, RUNTIME_ENTRIES), ...RUNTIME_FILES].sort();
-  const tests = closure(source, TEST_ENTRIES);
+  const tests = [...closure(source, TEST_ENTRIES), ...TEST_FILES].sort();
   const all = [...runtime, ...tests];
 
   const commit = git(source, ["rev-parse", "HEAD"]);
