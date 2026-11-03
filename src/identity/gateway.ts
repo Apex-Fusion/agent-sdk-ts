@@ -13,6 +13,7 @@ import crossFetch from 'cross-fetch';
 import { z } from 'zod';
 import { DEFAULT_IDENTITY_GATEWAY_URL } from '../constants.js';
 import { ConnectionError, VectorError } from '../errors.js';
+import { trimTrailingSlashes } from '../utils.js';
 import { isVectorId, parseVectorDid, vectorDid } from './vendor.js';
 
 export const RESOLUTION_MEDIA_TYPE = 'application/did-resolution';
@@ -200,7 +201,7 @@ export class IdentityGateway {
   private readonly fetchImpl: typeof crossFetch;
 
   constructor(baseUrl: string = DEFAULT_IDENTITY_GATEWAY_URL, options: IdentityGatewayOptions = {}) {
-    this.baseUrl = baseUrl.replace(/\/+$/, '');
+    this.baseUrl = trimTrailingSlashes(baseUrl);
     this.timeoutMs = options.timeoutMs ?? 15_000;
     this.fetchImpl = options.fetch ?? crossFetch;
   }

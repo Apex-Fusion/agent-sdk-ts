@@ -18,6 +18,7 @@ import {
   DEFAULT_SUBMIT_URL,
   REGISTRY_POLICY_ID,
 } from '../constants.js';
+import { trimTrailingSlashes } from '../utils.js';
 import { IdentityConfigError } from './errors.js';
 import type { OutputReference } from './vendor.js';
 
@@ -171,7 +172,7 @@ export function identityConfig(
     return value === null ? null : parseHex(field, String(value), bytes);
   };
   const url = (field: 'gatewayUrl' | 'ogmiosUrl' | 'submitUrl' | 'koiosUrl', fallback: string): string =>
-    String(given(field) ?? fallback).trim().replace(/\/+$/, '');
+    trimTrailingSlashes(String(given(field) ?? fallback).trim());
   const network = String(given('network') ?? 'mainnet').trim().toLowerCase();
   if (network !== 'mainnet' && network !== 'testnet') {
     throw new IdentityConfigError(`${IDENTITY_ENV_VARS.network}: expected mainnet or testnet`);
@@ -207,6 +208,6 @@ export function identityConfig(
     submitUrl: url('submitUrl', DEFAULT_SUBMIT_URL),
     koiosUrl: url('koiosUrl', DEFAULT_KOIOS_URL),
     koiosToken: koiosToken ? String(koiosToken) : null,
-    indexerUrl: indexerUrl ? String(indexerUrl).trim().replace(/\/+$/, '') : null,
+    indexerUrl: indexerUrl ? trimTrailingSlashes(String(indexerUrl).trim()) : null,
   };
 }

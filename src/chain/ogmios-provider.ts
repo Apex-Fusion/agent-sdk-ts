@@ -22,6 +22,7 @@ import type {
 } from '@lucid-evolution/lucid';
 import { z } from 'zod';
 import { ConnectionError, TransactionError } from '../errors.js';
+import { trimTrailingSlashes } from '../utils.js';
 import { addressFromBytes, rewardAddressBytes, type NetworkId } from '../identity/vendor.js';
 import {
   ogmiosUtxoToChainUtxo,
@@ -70,9 +71,9 @@ export class OgmiosProvider implements Provider, IdentityChain {
   private koiosToken: string | undefined;
 
   constructor(config: OgmiosProviderConfig) {
-    this.ogmiosUrl = config.ogmiosUrl.replace(/\/+$/, '');
-    this.submitUrl = config.submitUrl.replace(/\/+$/, '');
-    this.koiosUrl = config.koiosUrl?.replace(/\/+$/, '');
+    this.ogmiosUrl = trimTrailingSlashes(config.ogmiosUrl);
+    this.submitUrl = trimTrailingSlashes(config.submitUrl);
+    this.koiosUrl = config.koiosUrl ? trimTrailingSlashes(config.koiosUrl) : undefined;
     this.koiosToken = config.koiosToken || undefined;
   }
 
