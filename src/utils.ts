@@ -6,10 +6,20 @@ export function lovelaceToAda(lovelace: string | number | bigint): string {
 }
 
 /**
+ * Remove every trailing `/` from a URL. A loop, not the regex `/\/+$/`: that
+ * regex takes quadratic time on input with many `/` characters.
+ */
+export function trimTrailingSlashes(url: string): string {
+  let end = url.length;
+  while (end > 0 && url.charCodeAt(end - 1) === 0x2f) end -= 1;
+  return url.slice(0, end);
+}
+
+/**
  * Build an explorer transaction link.
  */
 export function explorerTxLink(explorerUrl: string, txHash: string): string {
-  return `${explorerUrl}/transaction/${txHash}`;
+  return `${trimTrailingSlashes(explorerUrl)}/transaction/${txHash}`;
 }
 
 /**

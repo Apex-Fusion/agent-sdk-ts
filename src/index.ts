@@ -23,6 +23,8 @@ export {
 // Sub-modules for advanced users
 export { OgmiosProvider } from './chain/ogmios-provider.js';
 export type { OgmiosProviderConfig } from './chain/ogmios-provider.js';
+export { ogmiosUtxoToChainUtxo } from './chain/identity-chain.js';
+export type { IdentityChain, RedeemerUnits } from './chain/identity-chain.js';
 export { SafetyLayer } from './safety/safety-layer.js';
 export { RateLimiter } from './safety/rate-limiter.js';
 export { HDWallet } from './wallet/hd-wallet.js';
@@ -30,18 +32,21 @@ export { SkeyWallet } from './wallet/skey-wallet.js';
 export type { WalletAdapter } from './wallet/types.js';
 export { AgentRegistry } from './registry/agent-registry.js';
 
-// Registry helpers
+// Legacy registry helpers
 export {
   deriveNftAssetName, buildAgentDatum, parseAgentDatum,
   parseDid, getRegistryAddress, getRegistryScriptHash,
 } from './registry/helpers.js';
+
+// Identity registry (did:vector): clients, configuration, signing, codecs
+export * from './identity/index.js';
 
 // Utilities
 export { lovelaceToAda, explorerTxLink, metadataStr, formatAssetName } from './utils.js';
 
 // Constants
 export {
-  REGISTRY_POLICY_ID, MIN_AP3X_DEPOSIT, AGENT_MESSAGE_LABEL,
+  REGISTRY_POLICY_ID, REGISTRY_ADDRESS, MIN_AP3X_DEPOSIT, AGENT_MESSAGE_LABEL,
   DEFAULT_OGMIOS_URL, DEFAULT_SUBMIT_URL, DEFAULT_KOIOS_URL, DEFAULT_EXPLORER_URL,
-  DEFAULT_PER_TX_LIMIT, DEFAULT_DAILY_LIMIT,
+  DEFAULT_IDENTITY_GATEWAY_URL, DEFAULT_PER_TX_LIMIT, DEFAULT_DAILY_LIMIT,
 } from './constants.js';

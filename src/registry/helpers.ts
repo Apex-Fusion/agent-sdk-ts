@@ -1,20 +1,18 @@
 // @ts-nocheck
-// Pure helper functions for the agent registry.
+// Pure helper functions for the legacy agent registry (did:vector Part 1 §4).
 // @ts-nocheck needed because Lucid's Data/Constr types are dynamically typed.
 
 import { Data, Constr, fromText, toText, validatorToAddress, validatorToScriptHash } from '@lucid-evolution/lucid';
-import { blake2b } from '@noble/hashes/blake2b';
 import { REGISTRY_SCRIPT_CBOR, REGISTRY_POLICY_ID } from '../constants.js';
+import { vectorIdFromSeed } from '../identity/vendor.js';
 import type { AgentProfile } from '../types.js';
 
 /**
- * Derive NFT asset name = blake2b_256(CBOR(OutputReference)).
- * Matches Aiken's derive_asset_name.
+ * Derive NFT asset name = blake2b_256(serialise(OutputReference)), the
+ * identifier of did:vector Part 1 §3.1. Both registries name tokens this way.
  */
 export function deriveNftAssetName(txHash: string, outputIndex: number): string {
-  const outRefCbor = Data.to(new Constr(0, [txHash, BigInt(outputIndex)]));
-  const hashBytes = blake2b(Buffer.from(outRefCbor, 'hex'), { dkLen: 32 });
-  return Buffer.from(hashBytes).toString('hex');
+  return vectorIdFromSeed(txHash, outputIndex);
 }
 
 /**
@@ -74,12 +72,18 @@ export function parseAgentDatum(
 }
 
 /**
- * Parse an agent DID string into its components.
+ * Parse an agent DID into the legacy token it names: the legacy form
+ * `did:vector:agent:{policyId}:{nftAssetName}`, or the canonical form
+ * `did:vector:{vector-id}` (read as a token of the legacy registry).
  */
 export function parseDid(agentId: string): { policyId: string; assetName: string; unit: string } {
+  const canonical = /^did:vector:([0-9a-f]{64})$/.exec(agentId);
+  if (canonical) {
+    return { policyId: REGISTRY_POLICY_ID, assetName: canonical[1], unit: `${REGISTRY_POLICY_ID}${canonical[1]}` };
+  }
   const parts = agentId.split(':');
   if (parts.length !== 5 || parts[0] !== 'did' || parts[1] !== 'vector' || parts[2] !== 'agent') {
-    throw new Error('Invalid agent DID format. Expected: did:vector:agent:{policyId}:{nftAssetName}');
+    throw new Error('Invalid agent DID format. Expected: did:vector:agent:{policyId}:{nftAssetName} or did:vector:{vector-id}');
   }
   if (!/^[a-f0-9]+$/.test(parts[3]) || !/^[a-f0-9]+$/.test(parts[4])) {
     throw new Error('Invalid agent DID: policyId and assetName must be hex strings.');

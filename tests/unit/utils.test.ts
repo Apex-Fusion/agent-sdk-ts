@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { lovelaceToAda, explorerTxLink, metadataStr, formatAssetName } from '../../src/utils.js';
+import { lovelaceToAda, explorerTxLink, metadataStr, formatAssetName, trimTrailingSlashes } from '../../src/utils.js';
 
 describe('lovelaceToAda', () => {
   it('converts integer lovelace', () => {
@@ -23,6 +23,25 @@ describe('explorerTxLink', () => {
   it('builds correct URL', () => {
     const url = explorerTxLink('https://explorer.example.com', 'abc123');
     expect(url).toBe('https://explorer.example.com/transaction/abc123');
+  });
+
+  it('removes trailing slashes of the explorer URL', () => {
+    expect(explorerTxLink('https://explorer.example.com//', 'abc123')).toBe('https://explorer.example.com/transaction/abc123');
+  });
+});
+
+describe('trimTrailingSlashes', () => {
+  it('removes every trailing slash and keeps the other slashes', () => {
+    expect(trimTrailingSlashes('https://a.example/api/v1///')).toBe('https://a.example/api/v1');
+    expect(trimTrailingSlashes('https://a.example/api')).toBe('https://a.example/api');
+    expect(trimTrailingSlashes('///')).toBe('');
+    expect(trimTrailingSlashes('')).toBe('');
+  });
+
+  it('takes linear time on many slashes', () => {
+    const url = `${'/'.repeat(200_000)}x`;
+    expect(trimTrailingSlashes(url)).toBe(url);
+    expect(trimTrailingSlashes(`${url}${'/'.repeat(200_000)}`)).toBe(url);
   });
 });
 
